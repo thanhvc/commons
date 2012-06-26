@@ -1,5 +1,6 @@
 package org.exoplatform.commons.upgrade;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -18,7 +19,7 @@ public class UpgradeProductService implements Startable {
   private static final String PROCEED_UPGRADE_FIRST_RUN_KEY = "proceedUpgradeWhenFirstRun";
   private static final String PRODUCT_VERSION_ZERO = "0";
 
-  private Set<UpgradeProductPlugin> upgradePlugins = new TreeSet<UpgradeProductPlugin>();
+  private Set<UpgradeProductPlugin> upgradePlugins = new HashSet<UpgradeProductPlugin>();
   private ProductInformations productInformations = null;
   private boolean proceedUpgradeFirstRun = false;
 
@@ -46,6 +47,7 @@ public class UpgradeProductService implements Startable {
     log.info("Add Product UpgradePlugin: name = " + upgradeProductPlugin.getName());
     if (upgradePlugins.contains(upgradeProductPlugin)) {
       log.warn(upgradeProductPlugin.getName() + " upgrade plugin is duplicated. One of the duplicated plugins will be ignored!");
+      return;
     }
     // add only enabled plugins
     if (upgradeProductPlugin.isEnabled()) {
