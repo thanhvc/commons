@@ -178,7 +178,7 @@ public class UserSettingServiceImpl extends AbstractService implements UserSetti
         } else {
           userNode = userHomeNode.addNode(user.getUserName(), STG_SIMPLE_CONTEXT);
         }
-        if (userNode.canAddMixin(MIX_DEFAULT_SETTING)) {
+        if (userNode.canAddMixin(MIX_DEFAULT_SETTING) && !userNode.getNodes().hasNext()) {
           userNode.addMixin(MIX_DEFAULT_SETTING);
           LOG.debug("Done to addMixin default setting for user: " + user.getUserName());
         }

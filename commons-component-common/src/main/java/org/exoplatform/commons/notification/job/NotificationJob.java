@@ -46,23 +46,14 @@ public abstract class NotificationJob implements Job {
     if (isValid() == false) {
       return;
     }
-    Callable<Boolean> task = new Callable<Boolean>() {
-      @Override
-      public Boolean call() throws Exception {
-        try {
-          NotificationSessionManager.createSystemProvider();
-          processSendNotification();
-        } catch (Exception e) {
-          LOG.error("Failed to running NotificationJob", e);
-          return false;
-        } finally {
-          NotificationSessionManager.closeSessionProvider();
-        }
-        return true;
-      }
-    };
-    //
-    CommonsUtils.getService(NotificationCompletionService.class).addTask(task);
+    try {
+      NotificationSessionManager.createSystemProvider();
+      processSendNotification();
+    } catch (Exception e) {
+      LOG.error("Failed to running NotificationJob", e);
+    } finally {
+      NotificationSessionManager.closeSessionProvider();
+    }
   }
 
   protected boolean isValid() {

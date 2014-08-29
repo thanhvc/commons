@@ -32,6 +32,7 @@ import javax.jcr.Session;
 import javax.jcr.query.Query;
 import javax.jcr.query.QueryManager;
 
+import org.apache.commons.lang.StringUtils;
 import org.exoplatform.commons.api.notification.NotificationContext;
 import org.exoplatform.commons.api.notification.model.NotificationInfo;
 import org.exoplatform.commons.api.notification.model.NotificationKey;
@@ -50,19 +51,18 @@ import org.exoplatform.services.log.Log;
 public class NotificationDataStorageImpl extends AbstractService implements NotificationDataStorage {
   private static final Log         LOG              = ExoLogger.getLogger(NotificationDataStorageImpl.class);
 
-  public static final String       REMOVE_ALL       = "removeAll";
+  private static final String       REMOVE_ALL       = "removeAll";
+  
+  private static final String       REMOVE_DAILY       = "removeDaily";
 
   private String                    workspace;
 
-  private NotificationConfiguration configuration    = null;
-  
   private final ReentrantLock lock = new ReentrantLock();
 
   private Map<String, Set<String>>  removeByCallBack = new ConcurrentHashMap<String, Set<String>>();
 
   public NotificationDataStorageImpl(NotificationConfiguration configuration) {
     this.workspace = configuration.getWorkspace();
-    this.configuration = configuration;
   }
 
   @Override
@@ -219,7 +219,7 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
 
   private NotificationInfo fillModel(Node node) throws Exception {
     if(node == null) return null;
-    NotificationInfo message = NotificationInfo.instance()
+    NotificationInfo model = NotificationInfo.instance()
       .setFrom(node.getProperty(NTF_FROM).getString())
       .setOrder(Integer.valueOf(node.getProperty(NTF_ORDER).getString()))
       .key(node.getProperty(NTF_PROVIDER_TYPE).getString())
@@ -228,7 +228,7 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
       .setSendToWeekly(NotificationUtils.valuesToArray(node.getProperty(NTF_SEND_TO_WEEKLY).getValues()))
       .setId(node.getName());
 
-    return message;
+    return model;
   }
 
   private void putRemoveMap(String key, String value) {
@@ -252,6 +252,8 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
   private void removeDaily(Session session, NotificationInfo message, String path) throws Exception {
     if (message.getSendToDaily().length == 1 && message.getSendToWeekly().length == 0) {
       putRemoveMap(REMOVE_ALL, path);
+    } if (message.getSendToDaily().length == 1 && NotificationInfo.FOR_ALL_USER.equalsIgnoreCase(message.getSendToDaily()[0])) {
+      putRemoveMap(REMOVE_DAILY, path);
     } else {
       removeProperty(session, path, NTF_SEND_TO_DAILY, message.getTo());
     }
@@ -296,6 +298,7 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
       // remove all
       Set<String> listPaths = removeByCallBack.get(REMOVE_ALL);
       removeByCallBack.remove(REMOVE_ALL);
+      
       if (listPaths != null && listPaths.size() > 0) {
         for (String nodePath : listPaths) {
           try {
@@ -312,9 +315,38 @@ public class NotificationDataStorageImpl extends AbstractService implements Noti
         }
         session.save();
       }
+      
+      listPaths = removeByCallBack.get(REMOVE_DAILY);
+      if (listPaths != null && listPaths.size() > 0) {
+        for (String path : listPaths) {
+          removeProperty(session, path, NTF_SEND_TO_DAILY, StringUtils.EMPTY);
+        }
+      }
     } catch (Exception e) {
       LOG.warn("Failed to remove message after sent email notification", e);
     }
+  }
+  
+  @Override
+  public List<NotificationInfo> get(NotificationKey key) throws Exception {
+    SessionProvider sProvider = NotificationSessionManager.createSystemProvider();
+    List<NotificationInfo> result = new ArrayList<NotificationInfo>();
+    try {
+      Node notificationHome = getNotificationHomeNode(sProvider, workspace);
+      Node pluginNode = notificationHome.getNode(key.getId());
+      
+      if (pluginNode != null) {
+        NodeIterator iter = pluginNode.getNodes();
+        
+        while(iter.hasNext()) {
+          Node notifNode = iter.nextNode();
+          result.add(fillModel(notifNode));
+        }
+      }
+    } catch (Exception e) {
+      LOG.warn("can not load notification by plugin key " + key.getId(), e);
+    }
+    return result;
   }
 
 }

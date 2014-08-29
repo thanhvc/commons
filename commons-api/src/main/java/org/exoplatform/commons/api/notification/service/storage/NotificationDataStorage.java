@@ -36,6 +36,14 @@ public interface NotificationDataStorage {
   void save(NotificationInfo notification) throws Exception;
   
   /**
+   * Gets all of the notification by key
+   * 
+   * @param key The notification key.
+   * @throws Exception
+   */
+  List<NotificationInfo> get(NotificationKey key) throws Exception;
+  
+  /**
    * Gets information of all notifications of a user.
    * 
    * @param userSetting The notification settings of the user.

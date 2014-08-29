@@ -80,7 +80,9 @@ public final class NotificationContextImpl implements NotificationContext {
   
   @Override
   public <T> NotificationContext append(ArgumentLiteral<T> argument, Object value) {
-    arguments.put(argument.getKey(), value);
+    if (value != null) {
+      arguments.put(argument.getKey(), value);
+    }
 
     return this;
   }

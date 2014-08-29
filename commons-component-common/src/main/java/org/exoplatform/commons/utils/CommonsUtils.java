@@ -1,5 +1,8 @@
 package org.exoplatform.commons.utils;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+
 import org.exoplatform.commons.api.settings.ExoFeatureService;
 import org.exoplatform.container.ExoContainer;
 import org.exoplatform.container.ExoContainerContext;
@@ -125,4 +128,47 @@ public class CommonsUtils {
       //
       return sysDomain;
     }
+    
+    /**
+     * Clean all of thread locals in the thread.
+     * To avoid the JCR Session has been reused in the Thread.
+     * @param thread the thread what needs to remove ThreadLocals
+     * 
+     * @throws NoSuchFieldException
+     * @throws ClassNotFoundException
+     * @throws IllegalArgumentException
+     * @throws IllegalAccessException
+     */
+  public static void cleanThreadLocals(Thread thread) throws NoSuchFieldException,
+                                                     ClassNotFoundException,
+                                                     IllegalArgumentException,
+                                                     IllegalAccessException {
+
+    Field threadLocalsField = Thread.class.getDeclaredField("threadLocals");
+    threadLocalsField.setAccessible(true);
+
+    Class threadLocalMapKlazz = Class.forName("java.lang.ThreadLocal$ThreadLocalMap");
+    Field tableField = threadLocalMapKlazz.getDeclaredField("table");
+    tableField.setAccessible(true);
+
+    Object fieldLocal = threadLocalsField.get(thread);
+    if (fieldLocal == null) {
+      return;
+    }
+    Object table = tableField.get(fieldLocal);
+    int threadLocalCount = Array.getLength(table);
+    for (int i = 0; i < threadLocalCount; i++) {
+      Object entry = Array.get(table, i);
+      if (entry != null) {
+        Field valueField = entry.getClass().getDeclaredField("value");
+        valueField.setAccessible(true);
+        Object value = valueField.get(entry);
+        if (value != null) {
+          if (value.getClass().getName().equals("com.sun.enterprise.security.authorize.HandlerData")) {
+            valueField.set(entry, null);
+          }
+        }
+      }
+    }
+  }
 }

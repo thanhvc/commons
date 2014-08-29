@@ -3,6 +3,7 @@ package org.exoplatform.settings.impl;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -27,6 +28,8 @@ import org.junit.runners.MethodSorters;
 public class UserSettingServiceTest extends BaseCommonsTestCase {
   private UserSettingServiceImpl userSettingService;
   private ExecutorService executor;
+  
+  private CountDownLatch start = new CountDownLatch(1);
   
   public UserSettingServiceTest() {
   }
@@ -63,6 +66,7 @@ public class UserSettingServiceTest extends BaseCommonsTestCase {
     // after upgrade
     list = userSettingService.getDigestDefaultSettingForAllUser(0, 0);
     assertEquals(10, list.size());
+    start.countDown();
   }
 
   public void testGetUsersSetting() throws Exception {
@@ -139,11 +143,13 @@ public class UserSettingServiceTest extends BaseCommonsTestCase {
   }
   
   public void testAddMixingMultiThreads() throws Exception {
+    
     for (int i = 0; i < 500; i++) {
       executor.execute(new Runnable() {
         @Override
         public void run() {
           try {
+            start.await();
             OrganizationService organizationService = CommonsUtils.getService(OrganizationService.class);
             ListAccess<User> list = organizationService.getUserHandler().findAllUsers();
             //

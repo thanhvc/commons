@@ -16,9 +16,13 @@
  */
 package org.exoplatform.commons.notification.impl;
 
+import org.exoplatform.commons.utils.CommonsUtils;
 import org.exoplatform.services.jcr.ext.common.SessionProvider;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 
 public class NotificationSessionManager {
+  private static final Log LOG = ExoLogger.getLogger(NotificationSessionManager.class);
 
   private static ThreadLocal<SessionProvider> session_ = new ThreadLocal<SessionProvider>();
 
@@ -35,6 +39,11 @@ public class NotificationSessionManager {
     if (sProvider != null) {
       sProvider.close();
       session_.set(null);
+      try {
+        CommonsUtils.cleanThreadLocals(Thread.currentThread());
+      } catch (Exception e) {
+        LOG.info(e.getMessage());
+      }
     }
   }
 
